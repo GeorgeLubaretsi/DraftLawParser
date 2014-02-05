@@ -239,7 +239,7 @@ public class Parser {
 								String registrationNumberForQuery = parseDataForQuery(rowData.get("registrationNumber"),true);
 								registrationNumberForQuery = registrationNumberForQuery.trim();
 
-								if (registrationNumberForQuery.isEmpty()){
+								if (!registrationNumberForQuery.isEmpty()){
 
 									String childLawTitle = parseDataForQuery(rowData.get("draftLawTitle"),true);
 									String lawNumber = parseDataForQuery(rowData.get("lawNumber"),true);
