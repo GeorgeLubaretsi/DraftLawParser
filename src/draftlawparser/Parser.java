@@ -46,15 +46,21 @@ public class Parser {
 	public static final LinkedList<String> colNames = new LinkedList<String>(Arrays.asList("registrationDate","registrationNumber","draftLawType",
 			"primaryDraftLaw","draftLawTitle","initiator","author","description","firstCommitteeHearing","firstPlenaryHearing","secondCommitteeHearing",
 			"secondPlenaryHearing","thirdCommitteeHearing","thirdPlenaryHearing","lawNumber","initialLawNumber","numberDaysDiscussion"));
+	
+	public static final LinkedList<String> statusLabelEn = new LinkedList<String>(Arrays.asList("1st Committee","1st Plenary","2nd Committee","2nd Plenary","3rd Committee","3rd Plenary"));
+	
+	public static final LinkedList<String> statusLabelKa = new LinkedList<String>(Arrays.asList("პირველი კომიტეტი","პირველი პლენარული","მეორე კომიტეტი","მეორე პლენარული","მესამე კომიტეტი","მესამე პლენარული"));
 
 	public static void main(String[] args) {
+		
+		String outputPath = args[0];
 
 		SpreadsheetService service = new SpreadsheetService("tig-draftlaw-spreadsheet");
 
 		SpreadsheetEntry spreadsheet = getGoogleSpreadsheet(service);
 
 		if (spreadsheet != null){
-			processSpreadsheet(spreadsheet, service);
+			processSpreadsheet(spreadsheet, service, outputPath);
 		}
 
 	}
@@ -110,15 +116,15 @@ public class Parser {
 
 	}
 
-	private static void processSpreadsheet(SpreadsheetEntry spreadsheet, SpreadsheetService service){
+	private static void processSpreadsheet(SpreadsheetEntry spreadsheet, SpreadsheetService service, String outputPath){
 		// Make a request to the API to fetch information about all
 		// worksheets in the spreadsheet.
 		List<WorksheetEntry> worksheets;
 		try {
 			worksheets = spreadsheet.getWorksheets();
 
-			File file = new File("/home/etienne/workspace/insertParentLaws.sql");
-			File childLawFile = new File("/home/etienne/workspace/insertChildLaw.sql");
+			File file = new File(outputPath+"/insertParentLaws.sql");
+			File childLawFile = new File(outputPath+"/insertChildLaw.sql");
 
 			if (!file.exists()) {
 				file.createNewFile();
@@ -178,15 +184,6 @@ public class Parser {
 						}
 						
 						String registrationNumber = rowData.get("registrationNumber");
-						/*
-						boolean isAlreadyAdded = true;
-						if (registrationNumber != null && registrationNumber.equalsIgnoreCase("#07-2/78")){
-							System.out.println();
-						}
-						if (registrationNumber != null && !addedNumbers.contains(registrationNumber) && isPrimaryDraft(rowData)){
-							addedNumbers.add(registrationNumber);
-							isAlreadyAdded = false;
-						}*/
 
 						if (shouldBeAdded){
 							if (isPrimaryDraft(rowData)){
@@ -209,7 +206,9 @@ public class Parser {
 								}
 
 								// Definition of the draft law's current status
-								String status = defineCurrentStatus(rowData);
+								String statusEnglish = defineCurrentStatus(rowData,statusLabelEn);
+								
+								String statusGeorgian = defineCurrentStatus(rowData,statusLabelKa);
 
 								// Insert main information into draftlaw_draftlaw table
 								String insertQuery = "INSERT INTO draftlaw_draftlaw (bureau_date,bill_number,title,title_en,"
@@ -218,7 +217,7 @@ public class Parser {
 										+ "related_4,related_5,slug) "
 										+ "VALUES ("+registrationDate+","+ registrationNumberForQuery.trim() +","+draftLawTitle+","+draftLawTitle+","
 										+draftLawTitle+","+initiator+","+initiator+","+initiator+","+author+","+author+","+author
-										+","+status+","+status+","+status+","+summary+","+summary+","+summary+","
+										+","+statusEnglish+","+statusEnglish+","+statusGeorgian+","+summary+","+summary+","+summary+","
 										+ "'','','','','','','','',"+slug+");\n";
 
 								bw.write(insertQuery);
@@ -267,7 +266,7 @@ public class Parser {
 			files[0] = file;
 			files[1] = childLawFile;
 
-			File outputFile = new File("/home/etienne/workspace/insertDraftLaws.sql");
+			File outputFile = new File(outputPath+"/insertDraftLaws.sql");
 
 			if (!outputFile.exists()) {
 				outputFile.createNewFile();
@@ -290,23 +289,17 @@ public class Parser {
 	/**
 	 * Defines the current status of a law
 	 * @param rowData
+	 * @param statusLabel 
 	 * @return status String
 	 */
-	private static String defineCurrentStatus(Map<String, String> rowData) {
+	private static String defineCurrentStatus(Map<String, String> rowData, LinkedList<String> statusLabel) {
 		LinkedList<String> hearingLabels = new LinkedList<String>(Arrays.asList("firstCommitteeHearing","firstPlenaryHearing","secondCommitteeHearing","secondPlenaryHearing","thirdCommitteeHearing","thirdPlenaryHearing"));
 		String status = "''";
-		LinkedList<String> statusMessage = new LinkedList<String>();
-		statusMessage.add("1st Committee");
-		statusMessage.add("1st Plenary");
-		statusMessage.add("2nd Committee");
-		statusMessage.add("2nd Plenary");
-		statusMessage.add("3rd Committee");
-		statusMessage.add("3rd Plenary");
 		int countHearing = 0;
 		for (String label : hearingLabels){
 			String hearing = rowData.get(label);
 			if (hearing != null && !hearing.trim().isEmpty()){
-				status = "'"+statusMessage.get(countHearing) + " " + hearing+"'";
+				status = "'"+statusLabel.get(countHearing) + " - " + hearing+"'";
 			}
 			countHearing++;
 		}
