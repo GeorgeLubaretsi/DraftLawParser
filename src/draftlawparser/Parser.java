@@ -50,8 +50,9 @@ public class Parser {
 			"lawNumber","numberDaysDiscussion"));
 
 	public static final LinkedList<String> statusLabelEn = new LinkedList<String>(Arrays.asList("1st Committee","1st Plenary","2nd Committee","2nd Plenary","3rd Committee","3rd Plenary"));
-
 	public static final LinkedList<String> statusLabelKa = new LinkedList<String>(Arrays.asList("პირველი კომიტეტი","პირველი პლენარული","მეორე კომიტეტი","მეორე პლენარული","მესამე კომიტეტი","მესამე პლენარული"));
+	public static final LinkedList<String> hearingLabelsKa = new LinkedList<String>(Arrays.asList("firstCommitteeHearing","firstPlenaryHearing","secondCommitteeHearing","secondPlenaryHearing","thirdCommitteeHearing","thirdPlenaryHearing"));
+	public static final LinkedList<String> hearingLabelsEn = new LinkedList<String>(Arrays.asList("firstCommitteeHearingEn","firstPlenaryHearingEn","secondCommitteeHearingEn","secondPlenaryHearingEn","thirdCommitteeHearingEn","thirdPlenaryHearingEn"));
 
 	public static void main(String[] args) {
 
@@ -143,13 +144,15 @@ public class Parser {
 			File file = new File(outputPath+"/insertParentLaws.sql");
 			File childLawFile = new File(outputPath+"/insertChildLaw.sql");
 
-			if (!file.exists()) {
-				file.createNewFile();
+			if (file.exists()) {
+				file.delete();
 			}
+			file.createNewFile();
 
-			if (!childLawFile.exists()) {
-				childLawFile.createNewFile();
+			if (childLawFile.exists()) {
+				childLawFile.delete();
 			}
+			childLawFile.createNewFile();
 
 			FileWriter fw = new FileWriter(file.getAbsoluteFile());
 			BufferedWriter bw = new BufferedWriter(fw);
@@ -223,8 +226,8 @@ public class Parser {
 							}
 							
 							// Definition of the draft law's current status
-							String statusEnglish = defineCurrentStatus(rowData,statusLabelEn);
-							String statusGeorgian = defineCurrentStatus(rowData,statusLabelKa);
+							String statusEnglish = defineCurrentStatus(rowData,"En");
+							String statusGeorgian = defineCurrentStatus(rowData,"Ka");
 
 
 							if (isPrimaryDraft(rowData)){
@@ -317,9 +320,10 @@ public class Parser {
 
 			File outputFile = new File(outputPath+"/updateDraftLaws.sql");
 
-			if (!outputFile.exists()) {
-				outputFile.createNewFile();
+			if (outputFile.exists()) {
+				outputFile.delete();
 			}
+			outputFile.createNewFile();
 
 			mergeFiles(files, outputFile);
 
@@ -353,14 +357,22 @@ public class Parser {
 	 * @param statusLabel 
 	 * @return status String
 	 */
-	private static String defineCurrentStatus(Map<String, String> rowData, LinkedList<String> statusLabel) {
-		LinkedList<String> hearingLabels = new LinkedList<String>(Arrays.asList("firstCommitteeHearing","firstPlenaryHearing","secondCommitteeHearing","secondPlenaryHearing","thirdCommitteeHearing","thirdPlenaryHearing"));
+	private static String defineCurrentStatus(Map<String, String> rowData, String lang) {
+		LinkedList<String> hearingLabelsToUse = null;
+		LinkedList<String> statusLabelToUse = null;
+		if (lang.equalsIgnoreCase("En")){
+			hearingLabelsToUse = hearingLabelsEn;
+			statusLabelToUse = statusLabelEn;
+		}else if (lang.equalsIgnoreCase("Ka")){
+			hearingLabelsToUse = hearingLabelsKa;
+			statusLabelToUse = statusLabelKa;
+		}
 		String status = "''";
 		int countHearing = 0;
-		for (String label : hearingLabels){
+		for (String label : hearingLabelsToUse){
 			String hearing = rowData.get(label);
 			if (hearing != null && !hearing.trim().isEmpty()){
-				status = "'"+statusLabel.get(countHearing) + " - " + hearing+"'";
+				status = "'"+statusLabelToUse.get(countHearing) + " - " + hearing+"'";
 			}
 			countHearing++;
 		}
